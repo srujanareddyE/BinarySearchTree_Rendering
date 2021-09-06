@@ -607,7 +607,8 @@ function createLine(x1, y1, x2, y2, id) {
         sy = (y1 + y2) / 2;
 
     var x = sx - c / 2,
-        y = sy;
+        y = sy + 240;
+       
 
     var alpha = Math.PI - Math.atan2(-b, a);
 
