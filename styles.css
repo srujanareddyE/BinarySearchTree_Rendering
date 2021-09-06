@@ -27,3 +27,22 @@ h3{
     color: #5f5f5f;
     font-weight: 400;
 }
+.main{
+    position: relative;
+    padding-top: 30px;
+}
+.text {
+    padding-top: 5px;
+  }
+.node {
+    width: 30px;
+    height: 30px;
+    left: 0px;
+    top: 0px;
+    position: absolute;
+    border-radius: 50%;
+    behavior: url(PIE.htc);
+    text-align: center;
+    font-weight: bold;
+    margin: auto;
+  }
