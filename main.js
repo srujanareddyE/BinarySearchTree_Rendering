@@ -8,7 +8,9 @@ var portal = 650;
 var maxLevel = 0;
 var max = 100;
 var min = -100;
+var levelSpacing = 35;
 var lock = false;
+//let tempArray = [56,-90,43,-57,53,49,55,-89,23];
 //var max = 100;
 //var min = -100;
 window.onkeydown = function (e) {
@@ -36,10 +38,12 @@ function createNewNode(){
 	div.style.left = "0px";
 	div.style.top = "0px";
 	div.style.backgroundColor = getRandomColorForNode();
+	
 	var div2 = document.createElement("div");
 	div2.classList.add("text");
 	var t;
 	while(true){
+		//t = tempArray.shift();
 		t = Math.floor((Math.random() * (max-min+1)) + 1)-(max-min)/2;
 		elem = document.getElementById(t);
 		if(elem === null){
@@ -49,6 +53,9 @@ function createNewNode(){
 	arr.push(t);
 	div.id = t;
 	div2.innerHTML = t;
+	div.addEventListener('click', function (event) {
+            deleteNode(t);
+        });
 	
 	var iterate = nextPick;
 	while(iterate !== undefined){
@@ -83,7 +90,7 @@ function pickNextNode(){
 	ongoingPick = nextPick;
     var elem = document.getElementById(ongoingPick);
 	nextPick = elem.prev;
-	if(root === undefined){
+	if(root === undefined || root === null){
 		root = ongoingPick;
 		var rootElem = document.getElementById(root);
 		rootElem.level = 0;
@@ -94,16 +101,91 @@ function pickNextNode(){
 	}
 	queueIndex--;
 }
+function deleteNode(id){
+	var nodeToDelete = document.getElementById(id);
+	if(nodeToDelete.leftChild && nodeToDelete.rightChild){
+		var leastInRightTree = document.getElementById(nodeToDelete.rightChild);
+		while(leastInRightTree.leftChild){
+			leastInRightTree = document.getElementById(leastInRightTree.leftChild);
+		}
+		swap(leastInRightTree, nodeToDelete);
+		return;
+	}
+	var parent = null;
+	if(nodeToDelete.parent){
+		 parent = document.getElementById(nodeToDelete.parent);
+	}
+	if(!nodeToDelete.leftChild && !nodeToDelete.rightChild){
+		if(parent){
+			if(parent.leftChild == id){
+				parent.leftChild = null;
+			} else if(parent.rightChild == id){
+			    parent.rightChild = null;
+			}
+		} else {
+			root = null;
+		}
+	} else if(!nodeToDelete.leftChild || !nodeToDelete.rightChild) {
+	    var child;
+		if(!nodeToDelete.leftChild){
+		 child = document.getElementById(nodeToDelete.rightChild);
+		} else {
+		 child = document.getElementById(nodeToDelete.leftChild);
+		}
+		if(parent){
+		    if(parent.leftChild == id){
+				parent.leftChild = child.id;
+			} else {
+				parent.rightChild = child.id;
+			}
+			child.parent = nodeToDelete.parent;
+			document.getElementById(id+"_"+child.id).remove();
+		} else {
+			root = child.id;
+			child.parent = null;
+		}
+		moveChildUp(child);
+	} 
+	
+	nodeToDelete.remove();
+	if(parent){
+	  let y = document.getElementById(parent.id+"_"+id);
+	  if(y){
+	   y.remove();
+	  }
+	}
+    const index = arr.indexOf(parseInt(id));
+	if (index > -1) {
+	  arr.splice(index, 1);
+	}
+    console.log(id+" deleted");    
+}
+function moveChildUp(node){
+	let top = parseInt(node.style.top,10);
+    node.level = node.level - 1;
+	node.style.top = (top-levelSpacing)+"px";
+	let oldChildLine = document.getElementById(node.parent+"_"+node.id);
+	if(oldChildLine){
+	  oldChildLine.remove();
+	}
+	drawLine(document.getElementById(node.parent), node);
+	if(node.leftChild){
+		moveChildUp(document.getElementById(node.leftChild));
+	}
+	if(node.rightChild){
+		moveChildUp(document.getElementById(node.rightChild));
+	}
+}
 function insertNode(elem){
 	if(parseInt(elem.id) > ongoingPick){
-		if(elem.leftChild === undefined){
+		if(elem.leftChild === undefined || elem.leftChild === null){
 			addLeftChild(elem);
 		} else {
 		   var leftChildElem = document.getElementById(elem.leftChild);
 		   insertNode(leftChildElem);
 		}
 	} else {
-	    if(elem.rightChild === undefined){
+	    if(elem.rightChild === undefined || elem.rightChild === null){
 			addRightChild(elem);
 		} else {
 		   var rightChildElem = document.getElementById(elem.rightChild);
@@ -149,7 +231,7 @@ function move(level,left2){
 		line.style.border = '1px solid white !important';
 		line.remove();
 	}*/
-	let top2 = 60+level*35;
+	let top2 = 60+level*levelSpacing;
 	let g = null;	  
 	var elem = document.getElementById(ongoingPick);
 	left1 = parseInt(elem.style.left,10);
@@ -187,24 +269,104 @@ function swap(elem1, elem2){
 	let left1, left2, top1, top2;
 	left2 = parseInt(elem1.style.left,10);
 	top2 = parseInt(elem1.style.top,10);
+	let todo = new Set();
 	if(elem2 === null){
 		left1 = portal;
 		top1 = 60;
 	} else {
 		left1 = parseInt(elem2.style.left,10);
 		top1 = parseInt(elem2.style.top,10);
-		id2 = setInterval(frame2, 5);
+		
+		tparent = elem1.parent;
+		tleftChild = elem1.leftChild;
+		trightChild = elem1.rightChild;
+		tlevel = elem1.level;
+		
+		if(elem1.parent){
+			todo.add(document.getElementById(elem1.parent+"_"+elem1.id));
+		}
+		if(elem1.rightChild){
+			todo.add(document.getElementById(elem1.id+"_"+elem1.rightChild));
+		}
+		if(elem1.leftChild){
+			todo.add(document.getElementById(elem1.id+"_"+elem1.leftChild));
+		}
+		if(elem2.parent){
+			todo.add(document.getElementById(elem2.parent+"_"+elem2.id));
+		}
+		if(elem2.rightChild){
+			todo.add(document.getElementById(elem2.id+"_"+elem2.rightChild));
+		}
+		if(elem2.leftChild){
+			todo.add(document.getElementById(elem2.id+"_"+elem2.leftChild));
+		}
+		
+		if(elem1.parent){
+		  if(elem1.parent != elem2.id){
+			let parentNode = document.getElementById(elem1.parent);
+			if(parentNode){
+				if(parentNode.leftChild == elem1.id){
+					parentNode.leftChild = elem2.id;
+				} else if(parentNode.rightChild == elem1.id){
+					parentNode.rightChild = elem2.id;
+				}
+			}
+		  }
+		}
+		if(elem2.parent){
+		   if(elem2.parent != elem1.id){
+			let parentNode = document.getElementById(elem2.parent);
+			if(parentNode){
+				if(parentNode.leftChild == elem2.id){
+					parentNode.leftChild = elem1.id;
+				} else if(parentNode.rightChild == elem2.id){
+					parentNode.rightChild = elem1.id;
+				}
+			}
+		  }	
+		}
+		elem1.parent = elem2.parent;
+		elem1.leftChild = elem2.leftChild;
+		elem1.rightChild = elem2.rightChild;
+		elem1.level = elem2.level;
+		
+		elem2.parent = tparent;
+		elem2.leftChild = tleftChild;
+		elem2.rightChild = trightChild;
+		elem2.level = tlevel;
+		
+		if(elem1.leftChild == elem1.id){
+			elem1.leftChild = elem2.id;
+		}
+		if(elem1.rightChild == elem1.id){
+			elem1.rightChild = elem2.id;
+		}
+		if(elem1.parent == elem1.id){
+			elem1.parent = elem2.id;
+		}
+		if(elem2.leftChild == elem2.id){
+			elem2.leftChild = elem1.id;
+		}
+		if(elem2.rightChild == elem2.id){
+			elem2.rightChild = elem1.id;
+		}
+		if(elem2.parent == elem2.id){
+			elem2.parent = elem1.id;
+		}
+		id2 = setInterval(frame2, 20);
 	}
-	id1 = setInterval(frame1, 5);
+	id1 = setInterval(frame1, 20);
 	
 	function frame1() {
 	let left = parseInt(elem1.style.left,10);
 	let top = parseInt(elem1.style.top,10);
-    if (left == left1) {
-	  if(top == top1) {
+    if (Math.abs(left1 - left) < Math.abs((left1-left2)/10) ) {
+	  if(Math.abs(top1 - top) < Math.abs((top1-top2)/10)  ) {
 		clearInterval(id1);
 		var elem3 = document.getElementById(ongoingPick);
-		ongoingPick = elem3.prev;
+		if(elem3){
+		  ongoingPick = elem3.prev;
+		}
 			if(queueIndex > 0){
 				pickNextNode();
 			} else {
@@ -219,6 +381,73 @@ function swap(elem1, elem2){
       elem1.style.left = left + "px"; 
     }
   }
+  function frame2() {
+	let left = parseInt(elem2.style.left,10);
+	let top = parseInt(elem2.style.top,10);
+    if (Math.abs(left2 - left) < Math.abs((left2-left1)/10) ) {
+	  if(Math.abs(top2 - top) < Math.abs((top2-top1)/10)  ) {
+		clearInterval(id2);
+		for (const item of todo) {
+		    if(item){
+				item.remove();
+			}
+		}
+		let todo2 = new Set();
+		if(elem1.parent){
+		    if(!todo2.has(elem1.parent+"_"+elem1.id)){
+			   drawLine(document.getElementById(elem1.parent),elem1);
+			   todo2.add(elem1.parent+"_"+elem1.id);	
+			}
+		}
+		if(elem1.rightChild){
+		    if(!todo2.has(elem1.id+"_"+elem1.rightChild)){
+				drawLine(elem1,document.getElementById(elem1.rightChild));
+				todo2.add(elem1.id+"_"+elem1.rightChild);
+			}
+		}
+		if(elem1.leftChild){
+		    if(!todo2.has(elem1.id+"_"+elem1.leftChild)){
+				drawLine(elem1,document.getElementById(elem1.leftChild));
+				todo2.add(elem1.id+"_"+elem1.leftChild);
+			}	
+		}
+		if(elem2.parent){
+		   if(!todo2.has(elem2.parent+"_"+elem2.id)){
+			drawLine(document.getElementById(elem2.parent),elem2);
+			todo2.add(elem2.parent+"_"+elem2.parent);
+		  }
+		}
+		if(elem2.rightChild){
+		   if(!todo2.has(elem2.id+"_"+elem2.rightChild)){
+			drawLine(elem2,document.getElementById(elem2.rightChild));
+			todo2.add(elem2.id+"_"+elem2.rightChild);
+		   }	
+		}
+		if(elem2.leftChild){
+		   if(!todo2.has(elem2.id+"_"+elem2.leftChild)){
+			drawLine(elem2,document.getElementById(elem2.leftChild));
+			todo2.add(elem2.id+"_"+elem2.leftChild);
+		   }	
+		}
+		
+		deleteNode(elem2.id);
+		//var elem3 = document.getElementById(ongoingPick);
+		//ongoingPick = elem3.prev;
+			/*if(queueIndex > 0){
+				pickNextNode();
+			} else {
+				animationStarted = false;
+			}*/
+	  } else {
+       top +=((top2-top1)/10); 
+       elem2.style.top = top + "px";
+      }
+    } else {
+      left +=((left2-left1)/10);  
+      elem2.style.left = left + "px"; 
+    }
+  }
+  
 }
 function adjustPositionsAllLevels(){
 	for(let l=maxLevel;l>0;l--){
@@ -255,7 +484,7 @@ function adjustPositions(level){
 			l1=5;
 			rowElems[i].style.left = "5px";
 			var parent = document.getElementById(rowElems[i].parent);
-			document.getElementById(parent.id+"-"+rowElems[i].id).remove();
+			document.getElementById(parent.id+"_"+rowElems[i].id).remove();
 			drawLine(parent,rowElems[i]);
 		}
 		if(l2<0){
@@ -267,7 +496,7 @@ function adjustPositions(level){
 			moveKids(rowElems[i+1], parseInt(rowElems[i+1].style.left,10)-l2);
 			
 			var parent = document.getElementById(rowElems[i+1].parent);
-			document.getElementById(parent.id+"-"+rowElems[i+1].id).remove();
+			document.getElementById(parent.id+"_"+rowElems[i+1].id).remove();
 			moveParent(parent,rowElems[i+1].id);
 			drawLine(parent,rowElems[i+1]);
 			
@@ -280,7 +509,7 @@ function moveKids(node, additional){
 		let lc = document.getElementById(node.leftChild);
 		let prev = parseInt(lc.style.left,10);
 		lc.style.left = (prev+additional)+"px";
-		document.getElementById(node.id+"-"+lc.id).remove();
+		document.getElementById(node.id+"_"+lc.id).remove();
 		drawLine(node,lc);
 		moveKids(lc, additional);
 	}
@@ -289,7 +518,7 @@ function moveKids(node, additional){
 		let rc = document.getElementById(node.rightChild);
 		let prev = parseInt(rc.style.left,10);
 		rc.style.left = (prev+additional)+"px";
-		document.getElementById(node.id+"-"+rc.id).remove();
+		document.getElementById(node.id+"_"+rc.id).remove();
 		drawLine(node,rc);
 		moveKids(rc, additional);
 	}
@@ -315,15 +544,15 @@ function moveParent(parent, child){
 	parent.style.left = ((left+right)/2)+"px";
 	
 	if(parent.leftChild == child && parent.rightChild){
-		document.getElementById(parent.id+"-"+parent.rightChild).remove();
+		document.getElementById(parent.id+"_"+parent.rightChild).remove();
 		drawLine(parent,document.getElementById(parent.rightChild));
 	} else if(parent.rightChild == child && parent.leftChild){
-		document.getElementById(parent.id+"-"+parent.leftChild).remove();
+		document.getElementById(parent.id+"_"+parent.leftChild).remove();
 		drawLine(parent,document.getElementById(parent.leftChild));
 	}
 	let superParent = document.getElementById(parent.parent);
 	if(superParent){
-	 document.getElementById(superParent.id+"-"+parent.id).remove();
+	 document.getElementById(superParent.id+"_"+parent.id).remove();
 	 moveParent(superParent, parent.id);
 	 drawLine(superParent,parent);
 	}
@@ -341,13 +570,14 @@ function drawVertices(node){
 	}
 }
 function drawLine(node1, node2){
-	
+	if(node1 && node2){
 	document.body.appendChild(createLine(15+parseInt(node1.style.left,10),
 	           15+parseInt(node1.style.top,10),
 			   15+parseInt(node2.style.left,10),
 	           15+parseInt(node2.style.top,10),
-			   node1.id+"-"+node2.id
-	           ));	   
+			   node1.id+"_"+node2.id
+	           ));	  
+    }			   
 }
 function createLineElement(x, y, length, angle, id) {
     var line = document.createElement("div");
